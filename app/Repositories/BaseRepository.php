@@ -1,70 +1,55 @@
 <?php
-
 namespace App\Repositories;
 
-use App\Repositories\RepositoryInterface;
+use Illuminate\Http\Request;
+use App\Models\User;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use DB;
+use Hash;
+use Illuminate\Support\Arr;
+use App\Models\Book;
 
-abstract class BaseRepository implements RepositoryInterface
+class BaseRepository
 {
-    //model muốn tương tác
-    protected $model;
+    protected $base;
 
-   //khởi tạo
-    public function __construct()
+    public function __construct(BaseRepository $base)
     {
-        $this->setModel();
+        $this->base = $base;
     }
 
-    //lấy model tương ứng
-    abstract public function getModel();
 
-    /**
-     * Set model
-     */
-    public function setModel()
+    public function index(Request $request, $service)
     {
-        $this->model = app()->make(
-            $this->getModel()
-        );
+        return $this->base->index($request, $service);
     }
 
-    public function getAll()
+    public function get($service, $id)
     {
-        return $this->model->all();
+        return $this->base->get($service, $id);
     }
 
-    public function find($id)
+    public function getPermission()
     {
-        $result = $this->model->find($id);
-
-        return $result;
+        return $this->base->getPermission();
     }
 
-    public function create($attributes = [])
+    public function validation(Request $request, $service)
     {
-        return $this->model->create($attributes);
+        return $this->base->validation($request, $service);
+    }
+    
+
+    public function input(Request $request, $service)
+    {
+        return $this->base->input($request, $service);
     }
 
-    public function update($id, $attributes = [])
+
+    public function sync(Request $request)
     {
-        $result = $this->find($id);
-        if ($result) {
-            $result->update($attributes);
-            return $result;
-        }
+        return $this->base->sync($request);
+    } 
 
-        return false;
-    }
-
-    public function delete($id)
-    {
-        $result = $this->find($id);
-        if ($result) {
-            $result->delete();
-
-            return true;
-        }
-
-        return false;
-    }
 }

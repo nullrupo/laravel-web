@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+
+use App\Services\UserServices;
+use App\Services\BaseServices;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -10,97 +13,69 @@ use Spatie\Permission\Models\Permission;
 use DB;
 use Hash;
 use Illuminate\Support\Arr;
+use App\Repositories\UserRepository;
+use App\Repositories\BaseRepository;
 
 class UserController extends Controller
 {
+    protected $use;
 
-    function __construct()
+    public function __construct(UserServices $use)
     {
-        $this->middleware('permission:user-list|user-create|user-edit|user-delete', ['only' => ['index','store']]);
-        $this->middleware('permission:user-create', ['only' => ['create','store']]);
-        $this->middleware('permission:user-edit', ['only' => ['edit','update']]);
-        $this->middleware('permission:user-delete', ['only' => ['destroy']]);
+        $this->use = $use;
     }
 
-    public function index(Request $request)
+
+    public function index(Request $request, $service)
     {
-        $data = User::orderBy('id','DESC')->paginate(5);
+        $this->use->index($request, $service);
+
         return view('users.index',compact('data'));
     }
 
 
     public function create()
     {
-        $permission = Permission::get();
-        $roles = Role::pluck('name','name')->all();
+        $this->use->create();
+
         return view('users.create',compact('roles'));
     }
 
 
-    public function store(Request $request)
+    public function store(Request $request, $service)
     {
-        $this->validate($request, [
-            'name'      => 'required',
-            'email'     => 'required|email|unique:users,email',
-            'password'  => 'required|same:confirm-password',
-            'roles'     => 'required'
-        ]);
-
-        $input = $request->all();
-        $input['password'] = Hash::make($input['password']);
-
-        $user = User::create($input);
-        $user->assignRole($request->input('roles'));
+        $this->use->store($request, $service);
 
         return redirect()->route('users.index')
                          ->with('success','User created successfully');
     }
 
-    public function show($id)
+    public function show($id, $service)
     {
-        $user = User::find($id);
+        $this->use->show($id, $service);
+
         return view('users.show',compact('user'));
     }
 
-    public function edit($id)
+    public function edit($id, $service)
     {
-        $permission = Permission::get();
-        $user = User::find($id);
-        $roles = Role::pluck('name','name')->all();
-        $userRole = $user->roles->pluck('name','name')->all();
+        $this->use->edit($id, $service);
 
         return view('users.edit',compact('user','roles','userRole'));
     }
 
     public function update(Request $request, $id)
     {
-        $this->validate($request, [
-            'name'      => 'required',
-            'email'     => 'required|email|unique:users,email,'.$id,
-            'password'  => 'same:confirm-password',
-            'roles'     => 'required'
-        ]);
-
-        $input = $request->all();
-        if(!empty($input['password'])){
-            $input['password'] = Hash::make($input['password']);
-        }else{
-            $input = Arr::except($input,array('password'));
-        }
-
-        $user = User::find($id);
-        $user->update($input);
-        DB::table('model_has_roles')->where('model_id',$id)->delete();
-
-        $user->assignRole($request->input('roles'));
+        $this->use->update($request, $id);
 
         return redirect()->route('users.index')
                          ->with('success','User updated successfully');
     }
 
-    public function destroy($id)
+    public function delete($id)
     {
-        User::find($id)->delete();
+        $this->use->delete($id);
+
         return redirect()->route('users.index')
                          ->with('success','User deleted successfully');
     }
